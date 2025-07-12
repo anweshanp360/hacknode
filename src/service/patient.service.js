@@ -1,6 +1,12 @@
-const { sql, poolPromise } = require('../db/config');
+// src/services/patient.service.js
+const { sql, poolPromise } = require('../db/config'); // Adjust path to db config
 
-const getPatients = async (filters) => {
+/**
+ * Retrieves patient records based on provided filters.
+ * @param {object} filters - An object containing filter criteria for patients.
+ * @returns {Array} - An array of patient records.
+ */
+const getAllPatients = async (filters) => {
   let query = `SELECT * FROM Patients WHERE 1=1`;
   const inputs = [];
 
@@ -64,6 +70,11 @@ const getPatients = async (filters) => {
   } 
 };
 
+/**
+ * Inserts a new patient record into the database.
+ * @param {object} patientData - An object containing all patient data fields.
+ * @returns {object} - An object indicating success or failure.
+ */
 const postPatient = async (patientData) => {
   const {
     patient_name,
@@ -121,12 +132,117 @@ const postPatient = async (patientData) => {
     await request.query(query);
     return { success: true, message: 'Patient data inserted successfully' };
   } catch (err) {
-    console.error('❌ Error in postPatient.service:', err);
+    console.error('❌ Error in patient.service (postPatient):', err);
+    throw err;
+  }
+};
+
+/**
+ * Updates an existing patient record in the database.
+ * @param {number} patientId - The ID of the patient to update.
+ * @param {object} patientData - An object containing the fields to update and their new values.
+ * @returns {object} - An object indicating success or failure.
+ */
+const updatePatient = async (patientId, patientData) => {
+  const updates = [];
+  const inputs = [];
+
+  // Define field types for validation and input binding
+  const fieldDefinitions = {
+    patient_name: sql.NVarChar,
+    age: sql.Int,
+    gender: sql.VarChar,
+    symptom_duration: sql.Int,
+    muscle_weakness: sql.Bit,
+    twitching: sql.Bit,
+    speech_difficulty: sql.Bit,
+    swallowing_difficulty: sql.Bit,
+    breathing_difficulty: sql.Bit,
+    family_history: sql.Bit,
+    previous_diagnosis: sql.NVarChar,
+    current_treatment: sql.VarChar,
+    biomarker_status: sql.VarChar,
+    EMG_result: sql.VarChar,
+  };
+
+  for (const key in patientData) {
+    if (patientData.hasOwnProperty(key) && fieldDefinitions[key]) {
+      updates.push(`${key} = @${key}`);
+      let value = patientData[key];
+      let type = fieldDefinitions[key];
+
+      // Handle boolean (BIT) fields
+      if (type === sql.Bit) {
+        value = value === 'true' || value === true ? 1 : 0;
+      }
+      // Handle integer fields
+      if (type === sql.Int) {
+        value = parseInt(value);
+      }
+      // Handle null for optional fields if an empty string is passed
+      if (value === '') {
+        value = null;
+      }
+
+      inputs.push({ name: key, type: type, value: value });
+    }
+  }
+
+  if (updates.length === 0) {
+    return { success: false, message: 'No valid fields to update.' };
+  }
+
+  const query = `UPDATE Patients SET ${updates.join(', ')} WHERE id = @id`;
+
+  try {
+    const pool = await poolPromise;
+    const request = pool.request();
+
+    inputs.forEach(input => {
+      request.input(input.name, input.type, input.value);
+    });
+    request.input('id', sql.Int, patientId); // Add patient_id for WHERE clause
+
+    const result = await request.query(query);
+    if (result.rowsAffected[0] > 0) {
+      return { success: true, message: `Patient with ID ${patientId} updated successfully.` };
+    } else {
+      return { success: false, message: `Patient with ID ${patientId} not found or no changes made.` };
+    }
+  } catch (err) {
+    console.error('❌ Error in patient.service (updatePatient):', err);
+    throw err;
+  }
+};
+
+/**
+ * Deletes a patient record from the database.
+ * @param {number} patientId - The ID of the patient to delete.
+ * @returns {object} - An object indicating success or failure.
+ */
+const deletePatient = async (patientId) => {
+  const query = `DELETE FROM Patients WHERE id = @id`;
+
+  try {
+    const pool = await poolPromise;
+    const request = pool.request();
+    request.input('id', sql.Int, patientId);
+
+    const result = await request.query(query);
+    if (result.rowsAffected[0] > 0) {
+      return { success: true, message: `Patient with ID ${patientId} deleted successfully.` };
+    } else {
+      return { success: false, message: `Patient with ID ${patientId} not found.` };
+    }
+  } catch (err) {
+    console.error('❌ Error in patient.service (deletePatient):', err);
     throw err;
   }
 };
 
 module.exports = {
-  getPatients,
-  postPatient
+  getAllPatients,
+  postPatient,
+  updatePatient,
+  deletePatient
 };

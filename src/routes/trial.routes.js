@@ -1,43 +1,18 @@
+// routes/trialRoutes.js
 const express = require('express');
 const router = express.Router();
-const { getTrials } = require('../controller/trial.controller');
+const trialController = require('../controller/trial.controller'); // Path to your controller file
 
-router.get('/', async (req, res, next) => {
-    try {
-        await getTrials(req, res, next); // Assuming getTrials handles sending the response
-    } catch (error) {
-        // Log the error
-        console.error('Error in getTrials route:', error);
+// GET all trials
+router.get('/', trialController.getTrials);
 
-        // Optionally, send an error response to the client
-        // You might want to customize this based on your API's error handling strategy
-        res.status(500).json({
-            message: 'An error occurred while fetching trials.',
-            error: error.message // Only send error.message in production, not the full stack
-        });
+// POST a new trial
+router.post('/', trialController.createNewTrial);
 
-        // Or, pass the error to the next error-handling middleware
-        // next(error);
-    }
-});
+// PUT (update) a trial by ID
+router.put('/:id', trialController.updateExistingTrial);
 
-router.post('/', async (req, res, next) => {
-    try {
-        await getTrials(req, res, next); // Assuming getTrials handles sending the response
-    } catch (error) {
-        // Log the error
-        console.error('Error in getTrials route:', error);
-
-        // Optionally, send an error response to the client
-        // You might want to customize this based on your API's error handling strategy
-        res.status(500).json({
-            message: 'An error occurred while fetching trials.',
-            error: error.message // Only send error.message in production, not the full stack
-        });
-
-        // Or, pass the error to the next error-handling middleware
-        // next(error);
-    }
-});
+// DELETE a trial by ID
+router.delete('/:id', trialController.deleteExistingTrial);
 
 module.exports = router;
