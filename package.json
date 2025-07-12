@@ -3,7 +3,18 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "collectCoverageFrom": [
+      "controller/**/*.js",
+      "service/**/*.js",
+      "routes/**/*.js"
+    ]
   },
   "author": "",
   "license": "ISC",
@@ -16,5 +27,9 @@
     "msnodesqlv8": "^4.5.0",
     "mssql": "^11.0.1",
     "tedious": "^18.6.1"
+  },
+  "devDependencies": {
+    "jest": "^30.0.4",
+    "supertest": "^7.1.3"
   }
 }
