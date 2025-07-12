@@ -75,6 +75,21 @@ const getAllPatients = async (filters) => {
  * @param {object} patientData - An object containing all patient data fields.
  * @returns {object} - An object indicating success or failure.
  */
+const getPatientById = async (id) => {
+  const query = `SELECT * FROM Patients WHERE id = @id`;
+  try {
+    const pool = await poolPromise;
+    const request = pool.request();
+    request.input('id', sql.Int, id);
+
+    const result = await request.query(query);
+    return result.recordset[0] || null;
+  } catch (err) {
+    console.error('❌ Error in patient.service (getPatientById):', err);
+    throw err;
+  }
+};
+
 const postPatient = async (patientData) => {
   const {
     patient_name,
@@ -100,6 +115,7 @@ const postPatient = async (patientData) => {
       breathing_difficulty, family_history,
       previous_diagnosis, current_treatment, biomarker_status, EMG_result
     )
+    OUTPUT INSERTED.id
     VALUES (
       @patient_name, @age, @gender, @symptom_duration,
       @muscle_weakness, @twitching, @speech_difficulty, @swallowing_difficulty,
@@ -129,8 +145,17 @@ const postPatient = async (patientData) => {
     request.input('biomarker_status', sql.VarChar, biomarker_status || null);
     request.input('EMG_result', sql.VarChar, EMG_result || null);
 
-    await request.query(query);
-    return { success: true, message: 'Patient data inserted successfully' };
+    const result = await request.query(query);
+    const insertedId = result.recordset[0].id;
+
+    // Fetch and return the newly inserted patient
+    const newPatient = await getPatientById(insertedId);
+
+    return {
+      success: true,
+      message: 'Patient data inserted successfully.',
+      patient: newPatient,
+    };
   } catch (err) {
     console.error('❌ Error in patient.service (postPatient):', err);
     throw err;
@@ -242,6 +267,7 @@ const deletePatient = async (patientId) => {
 
 module.exports = {
   getAllPatients,
+  getPatientById,
   postPatient,
   updatePatient,
   deletePatient

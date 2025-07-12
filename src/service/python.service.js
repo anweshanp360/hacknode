@@ -1,17 +1,47 @@
+const path = require('path');
+const fs = require('fs');
+const { spawn } = require('child_process');
 
-const { spawn } = require('child_process'); 
-const express = require('express');
-const bodyParser = require('body-parser');
+function findProjectRoot(startDir) {
+    let currentDir = startDir;
+    while (true) {
+        const packageJsonPath = path.join(currentDir, 'package.json');
+        if (fs.existsSync(packageJsonPath)) {
+            // Check if it's the root's package.json (optional, but good practice)
+            const packageJsonContent = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+            if (packageJsonContent.name === 'trial-match-root') { // Or some other unique identifier
+                 return currentDir;
+            }
+            // If not our specific root's package.json, might be a nested one (e.g., in 'Node')
+            // So, keep searching upwards
+        }
 
+        const parentDir = path.dirname(currentDir);
+        if (parentDir === currentDir) { // Reached file system root
+            throw new Error('Could not find project root (TrialMatch) containing package.json marker.');
+        }
+        currentDir = parentDir;
+    }
+}
 
-const app = express();
-app.use(bodyParser.json()); // To parse JSON bodies from incoming requests
-
-// Function to run the Python script (as defined in the previous response)
 function runPythonScript(data) {
     return new Promise((resolve, reject) => {
-        const pythonScriptPath = './ml_logic/match_trials.py'; // Path to your Python script
-        const pythonProcess = spawn('python', [pythonScriptPath, JSON.stringify(data)]);
+        let projectRoot;
+        try {
+            projectRoot = findProjectRoot(__dirname);
+        } catch (error) {
+            return reject(error);
+        }
+
+        const pythonScriptPath = path.join(projectRoot, 'BE', 'app.py');
+
+        console.log('Current Node.js file directory (__dirname):', __dirname);
+        console.log('Discovered Project Root:', projectRoot);
+        console.log('Resolved Python script path using Project Root Discovery:', pythonScriptPath);
+
+        const pythonProcess = spawn('python', [pythonScriptPath, JSON.stringify(data)], {
+            cwd: path.dirname(pythonScriptPath) // Set CWD to the BE folder
+        });
 
         let result = '';
         let errorOutput = '';
@@ -37,48 +67,7 @@ function runPythonScript(data) {
         });
 
         pythonProcess.on('error', (err) => {
-            reject(new Error(`Failed to start Python subprocess: ${err.message}`));
+            reject(new Error(`Failed to start Python subprocess: ${err.message}. Please ensure Python is installed and accessible in your system's PATH.`));
         });
     });
 }
-
-// Assume you have a function to get trial data from your DB/storage
-async function getClinicalTrialData() {
-    // This would be your database query or data fetching logic
-    // Example placeholder:
-    return [
-        { id: 1, disease_required: 'Diabetes', min_age: 18, max_age: 65 },
-        { id: 2, disease_required: 'Hypertension', min_age: 30, max_age: 80 }
-    ];
-}
-
-// Your API endpoint where the ML logic is triggered
-app.post('/api/match-trials', async (req, res) => {
-    const patientData = req.body; // Data sent from React Native
-
-    try {
-        // 1. Get all trial data (or filtered relevant trials)
-        const allTrials = await getClinicalTrialData();
-
-        // 2. Prepare the data payload for the Python script
-        const dataForPython = {
-            patient: patientData,
-            trials: allTrials
-        };
-
-        // 3. ✨ HERE IT IS! Call your runPythonScript function ✨
-        const mlResult = await runPythonScript(dataForPython);
-
-        // 4. Send the ML result back to the React Native frontend
-        res.json({ success: true, matches: mlResult });
-
-    } catch (error) {
-        console.error('Error in /api/match-trials:', error);
-        res.status(500).json({ success: false, message: 'Internal server error during trial matching.', error: error.message });
-    }
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Node.js server running on port ${PORT}`);
-});

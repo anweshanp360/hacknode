@@ -5,16 +5,36 @@ const patientService = require('../service/patient.service'); // Adjust path to 
  * Controller to handle GET /patients requests.
  * Retrieves patients based on query parameters.
  */
-const getPatientsController = async (req, res) => {
+const getPatients = async (req, res) => {
   try {
-    const filters = req.query; // Filters come from query parameters
-    const patients = await patientService.getAllPatients(filters);
+    const patients = await patientService.getAllPatients(req.query);
     res.status(200).json(patients);
-  } catch (error) {
-    console.error('Error in getPatientsController:', error);
-    res.status(500).json({ message: 'Error retrieving patients', error: error.message });
+  } catch (err) {
+    console.error('❌ Error in getPatients:', err);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
+
+const getPatientById = async (req, res) => {
+  const patientId = parseInt(req.params.id);
+
+  if (isNaN(patientId)) {
+    return res.status(400).json({ message: 'Invalid Patient ID provided.' });
+  }
+
+  try {
+    const patient = await patientService.getPatientById(patientId);
+    if (patient) {
+      res.status(200).json(patient);
+    } else {
+      res.status(404).json({ message: 'Patient not found.' });
+    }
+  } catch (err) {
+    console.error('Error in getPatientByIdController:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 
 /**
  * Controller to handle POST /patients requests.
@@ -90,7 +110,8 @@ const deletePatientController = async (req, res) => {
 };
 
 module.exports = {
-  getPatientsController,
+  getPatients,
+  getPatientById,
   postPatientController,
   updatePatientController,
   deletePatientController
