@@ -4,6 +4,8 @@ const cors = require('cors');
 const patientRoutes = require('./routes/patient.routes');
 const trialRoutes = require('./routes/trial.routes');
 const mlIntegrationRoutes = require('./routes/mlIntegration.routes');
+const matchRoutes = require('./routes/matchRoutes');
+const matchPatients = require('./routes/matchedpatientRoutes') // Assuming you have a match.routes.js file
 const { poolPromise } = require('./db/config'); // Assuming db/config.js handles SQL Server connection pool
 
 const app = express();
@@ -17,7 +19,9 @@ app.use(express.json()); // Parse JSON request bodies
 // These routes will handle the specific logic for patients, trials, and ML integration.
 app.use('/api/patients', patientRoutes);
 app.use('/api/trials', trialRoutes);
-app.use('/api/ml', mlIntegrationRoutes); // Routes specifically for ML integration tasks
+app.use('/api', mlIntegrationRoutes); 
+app.use('/api', matchRoutes);
+app.use('/api', matchPatients);
 
 // Database connection test and server start
 // The server will only start listening for requests once the SQL Server connection pool is ready.

@@ -1,6 +1,5 @@
-const { poolPromise } = require("../db/config");
 const sql = require("mssql"); // Assuming you have mssql imported/available
-const config = require("../db/config"); // Assuming your config is in ../db/config
+const { poolPromise, config } = require("../db/config"); // Assuming your config is in ../db/config
 
 const getAllTrials = async () => {
   try {
@@ -15,7 +14,7 @@ const getAllTrials = async () => {
 
 const createTrial = async (trialData) => {
   try {
-    const pool = await sql.connect(config);
+    const pool = await poolPromise;
     const request = pool.request();
 
     request.input('trial_name', sql.VarChar, trialData.trial_name);
@@ -56,13 +55,13 @@ const createTrial = async (trialData) => {
   }
 };
 
-const updateTrial = async (trialId, trialData) => {
+const updateTrial = async (trial_id, trialData) => {
   try {
-    const pool = await sql.connect(config);
+    const pool = await poolPromise;
     const request = pool.request();
 
     // Input parameters for update
-    request.input('id', sql.Int, trialId); // Assuming 'id' is your primary key for trials
+    request.input('trial_id', sql.Int, trial_id); // Assuming 'id' is your primary key for trials
     if (trialData.trial_name !== undefined) request.input('trial_name', sql.VarChar, trialData.trial_name);
     if (trialData.sponsor !== undefined) request.input('sponsor', sql.VarChar, trialData.sponsor);
     if (trialData.min_age !== undefined) request.input('min_age', sql.Int, trialData.min_age);
@@ -84,7 +83,7 @@ const updateTrial = async (trialId, trialData) => {
     const setClause = Object.keys(trialData)
       .map(key => {
         // Exclude 'id' from being updated as it's used in WHERE clause
-        if (key === 'id' || key === 'trial_id') return null; // Assuming id is the PK and won't be updated
+        if (key === 'trial_id' || key === 'trial_id') return null; // Assuming id is the PK and won't be updated
         return `${key} = @${key}`;
       })
       .filter(Boolean) // Remove nulls
@@ -97,31 +96,31 @@ const updateTrial = async (trialId, trialData) => {
     const result = await request.query(`
       UPDATE Trials
       SET ${setClause}
-      WHERE id = @id; -- Assuming 'id' is the primary key column name
+      WHERE trial_id = @trial_id; -- Assuming 'id' is the primary key column name
     `);
 
     return { success: true, rowsAffected: result.rowsAffected };
   } catch (error) {
-    console.error(`Error updating trial with ID ${trialId}:`, error);
+    console.error(`Error updating trial with ID ${trial_id}:`, error);
     throw error;
   }
 };
 
-const deleteTrial = async (trialId) => {
+const deleteTrial = async (trial_id) => {
   try {
-    const pool = await sql.connect(config);
+    const pool = await poolPromise;
     const request = pool.request();
 
-    request.input('id', sql.Int, trialId); // Assuming 'id' is your primary key
+    request.input('trial_id', sql.Int, trial_id); // Assuming 'id' is your primary key
 
     const result = await request.query(`
       DELETE FROM Trials
-      WHERE id = @id; -- Assuming 'id' is the primary key column name
+      WHERE trial_id = @trial_id; -- Assuming 'id' is the primary key column name
     `);
 
     return { success: true, rowsAffected: result.rowsAffected };
   } catch (error) {
-    console.error(`Error deleting trial with ID ${trialId}:`, error);
+    console.error(`Error deleting trial with ID ${trial_id}:`, error);
     throw error;
   }
 };
