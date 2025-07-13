@@ -1,6 +1,6 @@
 // src/services/patient.service.js
 const { sql, poolPromise } = require("../db/config"); // Adjust path to db config
-const axios = require("axios");
+const axios = require('axios');
 
 /**
  * Retrieves patient records based on provided filters.
@@ -185,10 +185,7 @@ const postPatient = async (patientData) => {
 
     let matchResponse = null;
     try {
-      matchResponse = await axios.post(
-        "http://localhost:5001/match_trial",
-        newPatient
-      );
+      matchResponse = await axios.post("http://localhost:5001/match_trial", newPatient);
       console.log("✅ Python matching API called successfully.");
     } catch (err) {
       console.error("⚠️ Failed to call Python matching API:", err.message);
